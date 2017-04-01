@@ -24,34 +24,56 @@ module controller(
     input clk,
     input rx,
     output tx
-);
+    );
 
-    reg [13:0] clk_div;
-    reg uart_clk = 0;
     reg rst = 1;
     
     reg [63:0] tx_data;
+    wire [7:0] tx_output;
     reg tx_valid = 0;
     wire tx_ready;
-    wire [63:0] rx_data;
+    reg [63:0] rx_data;
+    wire [7:0] rx_input;
     wire rx_valid;
     reg rx_ready = 1;
     
-    always @(posedge clk) begin
-        clk_div <= clk_div + 1;
-        if (clk_div == 10416) begin
-            rst <= 0;
-            clk_div <= 0;
-            uart_clk <= ~uart_clk;
-        end
+    reg [2:0]in_byte_count = 0;
+    reg [2:0]out_byte_count = 0;
+    
+    assign tx_output = tx_data[7:0];
         
-        tx_valid <= rx_valid;
+    always @(posedge clk) begin
+        if (rst) begin
+            rst <= 0;
+            tx_valid <= 0;
+        end
     end
     
-    uart U(uart_clk, rst, tx_data, tx_valid, tx_ready, rx_data, rx_valid, rx_ready, rx, tx);
+    wire tx_active;
+    
+    uart_rx UR(clk, rx, rx_valid, rx_input);
+    uart_tx UT(clk, tx_valid, tx_output, tx_active, tx, tx_ready); 
     
     always @(posedge rx_valid) begin
-        tx_data <= rx_data;
+        rx_data <= (rx_data << 8) | rx_input;
+        in_byte_count <= in_byte_count + 1;
+        
+        if (in_byte_count == 7) begin
+            tx_data <= rx_data;
+            out_byte_count <= 7;
+            tx_valid <= 1;
+            in_byte_count <= 0;
+        end
     end
+    
+    always @(posedge tx_ready) begin
+        tx_data <= tx_data >> 8;
+        out_byte_count <= out_byte_count - 1;
+        
+        if (out_byte_count == 0) begin
+            tx_valid <= 0;
+        end
+    end
+    
     
 endmodule
