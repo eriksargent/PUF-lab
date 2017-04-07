@@ -20,7 +20,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module arbel(
+(* keep_hierarchy = "yes" *) module arbel(
     input X,
     input Y,
     input C,
@@ -28,7 +28,15 @@ module arbel(
     output Z
     );
     
-    mux2x1 M1(X, Y, C, W);
-    mux2x1 M2(Y, X, C, Z);
+    wire W1, W2;
+    wire Z1, Z2;
+    
+    mux2x1 M1(X, Y, C, W1);
+    mux2x1 M2(Y, X, C, Z1);
+    
+    not N1(W2, W1);
+    not N2(W, W2);
+    not N7(Z2, Z1);
+    not N8(Z, Z2);
     
 endmodule
